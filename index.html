@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ramayana — The Path of Dharma</title>
+  <meta name="description" content="Play through the Ramayana in seven chapters, with mini-games and a learning at every checkpoint.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Tiro+Devanagari+Hindi&family=Yatra+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="viewport">
+    <div id="stage">
+      <div id="bg"></div>
+      <div id="scene">
+        <div class="portrait left" id="pl"></div>
+        <div class="portrait right" id="pr"></div>
+      </div>
+      <canvas id="game3d" width="1280" height="720"></canvas>
+      <canvas id="game" width="1280" height="720"></canvas>
+      <div id="ghud"></div>
+      <div id="dialog">
+        <div id="dname"></div>
+        <div id="dtext"></div>
+        <div class="next">❁</div>
+      </div>
+      <div id="choices"></div>
+      <div id="screen"></div>
+      <div id="hud">
+        <div id="hud-title"></div>
+        <div class="hud-btns">
+          <button id="b-map">Journey Map</button>
+          <button id="b-chars">Characters</button>
+          <button id="b-wis">Wisdom</button>
+          <button id="b-snd">♪ Sound</button>
+        </div>
+      </div>
+      <div id="modal"></div>
+      <div id="toast"></div>
+    </div>
+  </div>
+  <div id="rotate">Turn your device sideways to play ⟳</div>
+  <script src="vendor/three.min.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/games.js"></script>
+  <script src="js/action.js"></script>
+  <script src="js/action3d.js"></script>
+  <script src="js/story3d.js"></script>
+  <script src="js/engine.js"></script>
+</body>
+</html>
