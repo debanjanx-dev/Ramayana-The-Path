@@ -1540,6 +1540,7 @@ const Action = (() => {
         if (def.runner) { buildRunner(); S.hero.y = 540; S.hero.fireTail = true; }
         startCine({ kind: 'intro', dur: 2.4, freeze: true });
         Sound.play('conch');
+        Controls.show('2d-' + def.style);
         cv.classList.add('show');
         document.body.classList.add('action-on');
         padEl.classList.toggle('flyer', def.style === 'flyer');
@@ -1569,6 +1570,7 @@ const Action = (() => {
     cancelAnimationFrame(raf); S = null; resolveFn = null;
     if (cv) { cv.classList.remove('show'); ctx.clearRect(0, 0, W, H); }
     document.body.classList.remove('action-on');
+    Controls.hide();
     for (const k in keys) keys[k] = false;
   }
 

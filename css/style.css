@@ -352,6 +352,30 @@ body.action-on #pad, body.action3d-on #pad3, body.duel-on #pad4 { display: flex;
 .duel-res .res-port { width: 180px; height: 222px; margin: 0 auto 8px; border-radius: 90px 90px 12px 12px; overflow: hidden; border: 4px solid var(--gold); background: radial-gradient(ellipse at 50% 30%, #fff4d6, #e3c27e); }
 .duel-res .res-port svg { width: 100%; height: 100%; display: block; }
 
+/* ---- controls note ---- */
+#controls { position: absolute; right: 22px; top: 122px; z-index: 14; width: 400px; padding: 14px 18px 12px; display: none; color: #f6ead0;
+  background: rgba(16,12,34,.86); border: 1.5px solid rgba(246,215,126,.7); border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,.5);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); font-size: 17px; animation: fade .3s ease; }
+#controls.show { display: block; }
+.ctl-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.ctl-head b { font-family: var(--display); font-weight: 400; font-size: 22px; color: #ffe9a8; }
+.ctl-x { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--gold); background: rgba(184,50,31,.8); color: var(--gold-l); font-size: 14px; }
+.ctl-row { display: grid; grid-template-columns: 92px 1fr; gap: 8px; padding: 5px 0; border-top: 1px solid rgba(246,215,126,.15); line-height: 1.3; }
+.ctl-row span { color: #c9b98a; font-weight: 700; }
+.ctl-row b { font-weight: 600; }
+#controls kbd, #ctlpill kbd { display: inline-block; min-width: 22px; padding: 1px 6px; margin: 0 2px; font-family: var(--body); font-weight: 700; font-size: 14px; text-align: center;
+  color: #2b1a10; background: #f6e7c8; border: 1px solid var(--gold); border-bottom-width: 3px; border-radius: 5px; }
+.ctl-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ctl-two h4 { margin: 2px 0 4px; font-family: var(--display); font-weight: 400; color: #ffe9a8; font-size: 18px; }
+.ctl-two .ctl-row { grid-template-columns: 60px 1fr; }
+#controls.wide2 { width: 540px; }
+.ctl-note { margin: 8px 0 0; font-size: 15px; font-style: italic; color: #e9dcc0; }
+.ctl-foot { margin-top: 8px; font-size: 14px; opacity: .75; text-align: right; }
+#ctlpill { position: absolute; left: 20px; bottom: 16px; z-index: 14; display: none; padding: 6px 14px; font-size: 16px; font-weight: 700; color: #f6ead0;
+  background: rgba(16,12,34,.78); border: 1.5px solid rgba(246,215,126,.7); border-radius: 18px; }
+#ctlpill.show { display: block; }
+@media (hover: none) and (pointer: coarse) { #ctlpill.show { bottom: auto; top: 112px; } }
+
 /* rotate hint on small portrait screens */
 #rotate { display: none; }
 @media (orientation: portrait) and (max-width: 700px) {

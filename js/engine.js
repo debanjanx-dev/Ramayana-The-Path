@@ -338,6 +338,44 @@ const UI = {
 };
 
 /* =========================================================
+   CONTROLS — a short note of the keys for whatever is being
+   played; shown at the start, toggled any time with H
+   ========================================================= */
+const Controls = (() => {
+  const rows = r => r.map(([a, b]) => `<div class="ctl-row"><span>${a}</span><b>${b}</b></div>`).join('');
+  const CAM = ['Camera', '<kbd>Click</kbd> the field for 360° mouse look · <kbd>Esc</kbd> frees it · <kbd>Q</kbd>/<kbd>E</kbd> turn'];
+  const SETS = {
+    archer: { title: 'Controls — Rama', body: rows([['Move', '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>'], ['Jump', '<kbd>Space</kbd>'], ['Shoot', '<kbd>J</kbd> or <kbd>Click</kbd> · hold to charge a piercing arrow (aims itself)'], ['Super', '<kbd>K</kbd> when the gold bar is full — Brahmastra'], ['Roll', '<kbd>Shift</kbd> or <kbd>L</kbd> · dodge through attacks'], CAM, ['Pause', '<kbd>P</kbd>']]) },
+    brawler: { title: 'Controls', body: rows([['Move', '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>'], ['Jump', '<kbd>Space</kbd>'], ['Attack', '<kbd>J</kbd> or <kbd>Click</kbd> · tap 3× for a combo, attack in the air to slam'], ['Super', '<kbd>K</kbd> when the gold bar is full'], ['Roll', '<kbd>Shift</kbd> or <kbd>L</kbd>'], CAM, ['Pause', '<kbd>P</kbd>']]) },
+    flyer: { title: 'Controls — Jatayu', body: rows([['Fly', '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>'], ['Up / down', '<kbd>Space</kbd> / <kbd>C</kbd>'], ['Dive-strike', '<kbd>J</kbd> or <kbd>Click</kbd>'], ['Super', '<kbd>K</kbd> — Feather Storm'], ['Barrel roll', '<kbd>Shift</kbd> or <kbd>L</kbd>'], CAM]) },
+    '2d-archer': { title: 'Controls', body: rows([['Move', '<kbd>A</kbd>/<kbd>D</kbd> or arrows'], ['Jump', '<kbd>W</kbd> or <kbd>Space</kbd>'], ['Shoot', '<kbd>J</kbd> or <kbd>Click</kbd> · hold to charge · aim with the mouse'], ['Astra', '<kbd>K</kbd> when the gold bar is full'], ['Roll', '<kbd>L</kbd> or <kbd>Shift</kbd>'], ['Pause', '<kbd>P</kbd>']]) },
+    '2d-brawler': { title: 'Controls', body: rows([['Move', '<kbd>A</kbd>/<kbd>D</kbd> or arrows'], ['Jump', '<kbd>W</kbd> or <kbd>Space</kbd>'], ['Attack', '<kbd>J</kbd> or <kbd>Click</kbd> · combo, in the air to slam'], ['Special', '<kbd>K</kbd>'], ['Roll', '<kbd>L</kbd> or <kbd>Shift</kbd>'], ['Pause', '<kbd>P</kbd>']]) },
+    '2d-flyer': { title: 'Controls', body: rows([['Fly', '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>'], ['Dive', '<kbd>J</kbd>'], ['Feathers', '<kbd>K</kbd>'], ['Roll', '<kbd>L</kbd>']]) },
+    duel: { title: 'Duel controls', body: rows([['Move', '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>'], ['Jump', '<kbd>Space</kbd> · leap over shockwave rings'], ['Attack', '<kbd>J</kbd> or <kbd>Click</kbd> · archers hold to charge, warriors tap for combos'], ['Super', '<kbd>K</kbd> when the gold bar is full'], ['Roll', '<kbd>Shift</kbd> or <kbd>L</kbd>'], CAM]) + '<p class="ctl-note">Best of three rounds · a draw doesn\'t count</p>' },
+    'duel-local': { title: 'Two-player controls', body: `<div class="ctl-two"><div><h4>Player 1</h4>${rows([['Move', '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>'], ['Jump', '<kbd>Space</kbd>'], ['Attack', '<kbd>F</kbd>'], ['Super', '<kbd>G</kbd>'], ['Roll', '<kbd>L-Shift</kbd>']])}</div><div><h4>Player 2</h4>${rows([['Move', '<kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd>'], ['Jump', '<kbd>Enter</kbd>'], ['Attack', '<kbd>L</kbd>'], ['Super', '<kbd>;</kbd>'], ['Roll', '<kbd>R-Shift</kbd>']])}</div></div><p class="ctl-note">Archers hold Attack to charge · warriors tap for combos · <kbd>P</kbd> pauses</p>` },
+  };
+  let el = null, pill = null, kind = null, timer = 0;
+  function ensure() {
+    if (el) return;
+    el = document.createElement('div'); el.id = 'controls';
+    pill = document.createElement('button'); pill.id = 'ctlpill'; pill.innerHTML = '<kbd>H</kbd> Controls';
+    pill.onclick = e => { e.stopPropagation(); toggle(); };
+    const st = document.getElementById('stage'); st.appendChild(el); st.appendChild(pill);
+  }
+  function show(k) {
+    ensure(); const c = SETS[k] || SETS.duel; kind = k;
+    el.innerHTML = `<div class="ctl-head"><b>${c.title}</b><button class="ctl-x" title="Hide (H)">✕</button></div>${c.body}<div class="ctl-foot">Press <kbd>H</kbd> to show or hide</div>`;
+    el.querySelector('.ctl-x').onclick = e => { e.stopPropagation(); el.classList.remove('show'); };
+    el.classList.toggle('wide2', k === 'duel-local');
+    el.classList.add('show'); pill.classList.add('show');
+    clearTimeout(timer); timer = setTimeout(() => el.classList.remove('show'), 10000);
+  }
+  function toggle() { if (!kind) return; clearTimeout(timer); el.classList.toggle('show'); }
+  function hide() { kind = null; clearTimeout(timer); if (el) { el.classList.remove('show'); pill.classList.remove('show'); } }
+  return { show, hide, toggle, get active() { return !!kind; } };
+})();
+
+/* =========================================================
    CHAPTER RUNNER
    ========================================================= */
 // 3D fights when WebGL is available, unless the player switched to 2D on the map
@@ -424,7 +462,10 @@ window.addEventListener('DOMContentLoaded', () => {
       if (UI.advance && !$('#modal').classList.contains('show')) { e.preventDefault(); adv(); }
     }
   });
+  // start audio on the first click, tap or key press
   document.addEventListener('pointerdown', () => Sound.init(), { once: true });
+  document.addEventListener('keydown', () => Sound.init(), { once: true });
+  window.addEventListener('keydown', e => { if (e.code === 'KeyH' && Controls.active) { e.preventDefault(); Controls.toggle(); } });
   $('#b-map').onclick = leaveChapter;
   $('#b-chars').onclick = () => UI.gallery();
   $('#b-wis').onclick = () => UI.wisdom();

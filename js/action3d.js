@@ -1315,7 +1315,7 @@ const Action3D = (() => {
     if (k === 'light') {
       g.add(new T.Mesh(SPH(.16, 10, 8), basic('#ffffff'))).scale.set(1, 1, 5);
       const glow = new T.Mesh(SPH(.42, 10, 8), basic('#ffe9a0', { transparent: true, opacity: .55, blending: T.AdditiveBlending, depthWrite: false })); glow.scale.set(1, 1, 3.4); g.add(glow);
-      const pl = new T.PointLight(0xffe9a0, 1.6, 7); g.add(pl);
+      g.add(new T.Mesh(SPH(.9, 10, 8), basic('#ffe9a0', { transparent: true, opacity: .18, blending: T.AdditiveBlending, depthWrite: false })));
     } else if (k === 'arrow' || k === 'bigArrow' || k === 'eArrow' || k === 'astra' || k === 'fireArrow') {
       const big = k === 'bigArrow' || k === 'astra', fire = k === 'astra' || k === 'fireArrow';
       const sh = new T.Mesh(CYL(.018, .018, big ? 1.4 : 1, 5), big ? basic('#fff1a8') : toon(k === 'eArrow' ? '#2a1a10' : '#6e4416')); sh.rotation.x = Math.PI / 2; g.add(sh);
@@ -1737,10 +1737,6 @@ const Action3D = (() => {
       label(b.def.name, W / 2, H - 50, 24, '#ffe9a8', DISPLAY); bar(W / 2 - 330, H - 38, 660, 16, k, '#c0391b');
     }
     if (S.fightT > 0) label(def.runner ? 'RUN!' : 'FIGHT!', W / 2, H / 2, 96 + (1 - S.fightT) * 30, '#ffe9a8', DISPLAY);
-    if (S.t < 10 && !c) {
-      const tip = { archer: 'WASD move · Space jump · J / click: shoot (hold = charged arrow, auto-aims) · K astra · Shift/L roll · click the screen for 360° mouse camera (Esc frees it)', brawler: 'WASD move · Space jump · J / click: combo (in air = slam) · K special · Shift/L roll · click for 360° mouse camera', flyer: 'WASD fly · Space up / C down · J dive-strike · K feather storm · Shift/L roll' }[h.style];
-      g.globalAlpha = Math.min(1, 10 - S.t); label(tip, W / 2, H - 90, 19, '#fff3c4'); g.globalAlpha = 1;
-    }
     if (!c && document.pointerLockElement !== hud && S.t > 2 && S.t < 30 && !S.touchLook) { g.font = `600 17px ${SERIF}`; label('🖱  Click the battlefield to look around 360° with your mouse', W - 300, 120, 17, '#fff3c4'); }
     if (S.paused) { g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(0, 0, W, H); label('Paused', W / 2, H / 2, 64, '#ffe9a8', DISPLAY); label('Press Esc or P to continue', W / 2, H / 2 + 50, 24); }
   }
@@ -1808,6 +1804,7 @@ const Action3D = (() => {
       S.camYaw = S.hero.yaw + Math.PI;
       startCine({ kind: 'intro', dur: 2.6, freeze: true });
       Sound.play('conch');
+      Controls.show(def.style);
       glCv.classList.add('show'); hud.classList.add('show');
       document.body.classList.add('action3d-on');
       last = performance.now();
@@ -1837,6 +1834,7 @@ const Action3D = (() => {
     if (glCv) glCv.classList.remove('show');
     if (hud) { hud.classList.remove('show'); hctx.clearRect(0, 0, W, H); }
     document.body.classList.remove('action3d-on');
+    Controls.hide();
     for (const k in keys) keys[k] = false;
     if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
     scene = null;

@@ -84,28 +84,35 @@ const Duel = (() => {
   /* =========================================================
      ARENA
      ========================================================= */
+  const owned = [];   // geometries/materials made just for this arena (shared caches are kept)
+  function disposeArena() {
+    for (const o of owned) { try { o.dispose(); } catch (e) { /* already gone */ } }
+    owned.length = 0; scene = null;
+  }
+  const own = o => { owned.push(o); return o; };
   function buildArena(key) {
+    disposeArena();
     const th = K.THEME3[ARENAS[key].theme];
     scene = new T.Scene();
     scene.fog = new T.Fog(th.fog, 40, 170);
-    const sky = K.skyDome(th); scene.add(sky); scene.userData.sky = sky;
+    const sky = K.skyDome(th); scene.add(sky); scene.userData.sky = sky; own(sky.geometry); own(sky.material);
     scene.add(new T.HemisphereLight(th.night ? 0x8a8ac8 : 0xfff4dc, th.ground, th.night ? .45 : .32));
     const dir = new T.DirectionalLight(th.night ? 0xb8c4ff : 0xfff0d0, th.night ? .55 : .62);
     dir.position.set(14, 26, 10); dir.castShadow = true; dir.shadow.mapSize.set(2048, 2048);
     const sc = dir.shadow.camera; sc.left = sc.bottom = -20; sc.right = sc.top = 20; sc.near = 1; sc.far = 70; dir.shadow.bias = -.0005;
     scene.add(dir); scene.add(new T.AmbientLight(0xffffff, .12));
-    const disc = new T.Mesh(new T.CircleGeometry(th.night ? 12 : 16, 32), K.basic(th.night ? '#fff3c4' : (th.sun || '#fff3c4'), { fog: false }));
+    const disc = new T.Mesh(own(new T.CircleGeometry(th.night ? 12 : 16, 32)), K.basic(th.night ? '#fff3c4' : (th.sun || '#fff3c4'), { fog: false }));
     disc.position.set(-120, 110, -260); disc.lookAt(0, 0, 0); scene.add(disc);
     if (th.night) {
       const pts = []; for (let i = 0; i < 500; i++) { const a = rnd(0, Math.PI * 2), b = rnd(.1, 1.4); pts.push(Math.cos(a) * Math.cos(b) * 350, Math.sin(b) * 350, Math.sin(a) * Math.cos(b) * 350); }
-      const sg = new T.BufferGeometry(); sg.setAttribute('position', new T.Float32BufferAttribute(pts, 3));
-      scene.add(new T.Points(sg, new T.PointsMaterial({ color: 0xfff6d8, size: 1.6, sizeAttenuation: false, fog: false })));
+      const sg = own(new T.BufferGeometry()); sg.setAttribute('position', new T.Float32BufferAttribute(pts, 3));
+      scene.add(new T.Points(sg, own(new T.PointsMaterial({ color: 0xfff6d8, size: 1.6, sizeAttenuation: false, fog: false }))));
     }
-    const ground = new T.Mesh(new T.PlaneGeometry(500, 500), new T.MeshToonMaterial({ map: K.groundTex(th), gradientMap: K.GRAD, color: 0xffffff }));
+    const ground = new T.Mesh(own(new T.PlaneGeometry(500, 500)), own(new T.MeshToonMaterial({ map: K.groundTex(th), gradientMap: K.GRAD, color: 0xffffff })));
     ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
     // the duelling circle
-    const ring = new T.Mesh(new T.RingGeometry(R - .2, R + .2, 96), K.basic('#f6d77e', { transparent: true, opacity: .55 })); ring.rotation.x = -Math.PI / 2; ring.position.y = .02; scene.add(ring);
-    const inner = new T.Mesh(new T.CircleGeometry(R, 64), K.basic(th.night ? '#2a2a40' : '#000000', { transparent: true, opacity: .08 })); inner.rotation.x = -Math.PI / 2; inner.position.y = .015; scene.add(inner);
+    const ring = new T.Mesh(own(new T.RingGeometry(R - .2, R + .2, 96)), K.basic('#f6d77e', { transparent: true, opacity: .55 })); ring.rotation.x = -Math.PI / 2; ring.position.y = .02; scene.add(ring);
+    const inner = new T.Mesh(own(new T.CircleGeometry(R, 64)), K.basic(th.night ? '#2a2a40' : '#000000', { transparent: true, opacity: .08 })); inner.rotation.x = -Math.PI / 2; inner.position.y = .015; scene.add(inner);
     for (let i = 0; i < 36; i++) {
       const a = i / 36 * Math.PI * 2, r = R + rnd(4, 14), x = Math.cos(a) * r, z = Math.sin(a) * r;
       if (key === 'kishkindha' && i % 2) K.rock3(scene, x, z, rnd(1.5, 3.5), i % 4 ? '#9a5a2a' : '#b5713a');
@@ -115,6 +122,7 @@ const Duel = (() => {
     }
     for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; K.mountain3(scene, Math.cos(a) * 160, Math.sin(a) * 160, rnd(40, 80), rnd(30, 55), key === 'kishkindha' ? '#b5713a' : key === 'battle' ? '#4a1a14' : th.night ? '#1e2a3a' : '#7fa874'); }
     PSA = K.makePS(1600, true); PSN = K.makePS(700, false); scene.add(PSA.pts); scene.add(PSN.pts);
+    for (const ps of [PSA, PSN]) { own(ps.g); own(ps.pts.material); }
   }
 
   /* ---------- effects (local, never networked directly) ---------- */
@@ -330,7 +338,7 @@ const Duel = (() => {
       const col = k === 'light' ? '#ffe9a0' : '#9be3a4';
       g.add(new T.Mesh(K.SPH(.15, 10, 8), K.basic('#ffffff'))).scale.set(1, 1, 5);
       const gl = new T.Mesh(K.SPH(.42, 10, 8), K.basic(col, { transparent: true, opacity: .55, blending: T.AdditiveBlending, depthWrite: false })); gl.scale.set(1, 1, 3.2); g.add(gl);
-      g.add(new T.PointLight(new T.Color(col).getHex(), 1.4, 6));
+      const halo = new T.Mesh(K.SPH(.9, 10, 8), K.basic(col, { transparent: true, opacity: .18, blending: T.AdditiveBlending, depthWrite: false })); g.add(halo);
     } else if (k === 'fireball') {
       g.add(new T.Mesh(K.SPH(.35, 10, 8), K.basic('#ffd76a'))); g.add(new T.Mesh(K.SPH(.6, 10, 8), K.basic('#f2702b', { transparent: true, opacity: .5, blending: T.AdditiveBlending, depthWrite: false })));
     } else {
@@ -429,7 +437,7 @@ const Duel = (() => {
     const dt = Math.min(.05, (now - last) / 1000); last = now;
     step(dt);
   }
-  function step(dt) {
+  function step(dt, noRender) {
     if (D.mode === 'client') clientStep(dt);
     else if (!D.paused) {
       simulate(dt);
@@ -438,6 +446,7 @@ const Duel = (() => {
     animate(dt); camUpdate(dt);
     K.psUpdate(PSA, dt); K.psUpdate(PSN, dt);
     syncMeshes(D.shots, D.hz, dt);
+    if (noRender) { for (const k in keys) prev[k] = keys[k]; return; }
     K.renderer.render(scene, camera);
     drawHUD(dt);
     for (const k in keys) prev[k] = keys[k];
@@ -531,11 +540,6 @@ const Duel = (() => {
       if (bn.t > bn.dur) D.banner = null;
     }
     if (D.flash > 0) { g.fillStyle = `rgba(255,250,230,${Math.min(.9, D.flash)})`; g.fillRect(0, 0, W, H); D.flash -= dt * 1.5; }
-    if (D.round === 1 && D.t < 14 && D.phase !== 'end') {
-      const tip = D.mode === 'local' ? 'P1: WASD · Space jump · F attack · G super · L-Shift roll      P2: Arrows · Enter jump · L attack · ; super · R-Shift roll'
-        : 'WASD move · Space jump · J / click attack (archers: hold to charge) · K super · Shift roll · click for 360° mouse camera';
-      label(tip, W / 2, H - 28, 17, '#fff3c4');
-    }
     if (D.mode === 'client' || D.mode === 'host') label(D.netOk === false ? 'Connection lost…' : `Online · room ${Net.code || ''}`, W - 20, H - 14, 15, D.netOk === false ? '#ff8a6a' : '#9be3a4', SERIF, 'right');
     if (D.paused) { g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(0, 0, W, H); label('Paused', W / 2, H / 2, 64, '#ffe9a8', DISPLAY); label('Esc or P to continue', W / 2, H / 2 + 46, 22); }
   }
@@ -645,12 +649,16 @@ const Duel = (() => {
     else roundStart();
     if (opts.mode === 'host') Net.onMsg = m => { if (m.t === 'i' && D) D.remoteIn = m; else DuelUI.netMsg(m); };
     glCv.classList.add('show'); hud.classList.add('show'); document.body.classList.add('duel-on');
+    Controls.show(opts.mode === 'local' ? 'duel-local' : 'duel');
     last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
   }
   function stop() {
     cancelAnimationFrame(raf); D = null;
+    for (const [, m] of meshes) if (scene) scene.remove(m); meshes.clear(); fxList.length = 0;
+    disposeArena();
     if (glCv) glCv.classList.remove('show'); if (hud) { hud.classList.remove('show'); hctx.clearRect(0, 0, W, H); }
     document.body.classList.remove('duel-on');
+    Controls.hide();
     if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
     for (const k in keys) keys[k] = false;
   }
