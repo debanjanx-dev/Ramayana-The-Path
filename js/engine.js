@@ -226,13 +226,14 @@ const UI = {
       <h1>Ramayana</h1>
       <div class="t-sub">The Path of Dharma</div>
       <div class="t-row">${['rama', 'sita', 'lakshmana', 'hanuman'].map(k => `<div class="t-port">${Portrait.svg(k)}</div>`).join('')}</div>
-      <div class="t-btns">
-        <button class="btn big go">${started ? 'Continue the Journey' : 'Begin the Journey'}</button>
-        <button class="btn ghost chars">Characters</button>
-        <button class="btn ghost wis">Wisdom Scroll</button>
+      <div class="t-modes">
+        <button class="mode-card go"><b>Story Mode</b><span>${started ? 'Continue the journey' : 'Walk the path of Rama'}</span></button>
+        <button class="mode-card duel"><b>Multiplayer</b><span>Duel online, side by side, or vs computer</span></button>
       </div>
+      <div class="t-btns"><button class="btn ghost chars">Characters</button><button class="btn ghost wis">Wisdom Scroll</button></div>
       <div class="t-foot">Based on Valmiki's Ramayana, with details from Tulsidas and the living tradition · Click, tap or press Space to advance</div>`, 'title');
     s.querySelector('.go').onclick = () => { Sound.init(); this.map(); };
+    s.querySelector('.duel').onclick = () => { Sound.init(); DuelUI.menu(); };
     s.querySelector('.chars').onclick = () => this.gallery();
     s.querySelector('.wis').onclick = () => this.wisdom();
   },
@@ -242,29 +243,29 @@ const UI = {
     this.clearPortraits(); this.hideDialog();
     $('#bg').innerHTML = BG.get('title');
     if (Story3D.enabled) { Story3D.setScene('title'); Story3D.setMapView(true); } else Story3D.hide();
-    const P = [[140, 410], [320, 505], [500, 410], [680, 505], [860, 410], [1060, 505], [640, 196]];
+    const THUMB = { bala: 'mithila', ayodhya: 'ayodhya', aranya: 'forest', kishkindha: 'kishkindha', sundara: 'ocean', yuddha: 'battle', home: 'ayodhyaNight' };
     const next = CHAPTERS.findIndex((c, i) => Save.unlocked(i) && !Save.data.done.includes(c.id));
-    const nodes = CHAPTERS.map((c, i) => {
+    const cards = CHAPTERS.map((c, i) => {
       const un = Save.unlocked(i), done = Save.data.done.includes(c.id);
-      return `<button class="node ${done ? 'done' : un ? 'open' : 'locked'} ${i === next ? 'next' : ''}" data-i="${i}" style="left:${P[i][0]}px;top:${P[i][1]}px" ${un ? '' : 'disabled'}>
-        <span class="medal">${un ? icon(c.icon) : '<span class="lock">🔒</span>'}</span>
-        <span class="n-num">${c.num} · ${c.kanda}</span>
-        <span class="n-name">${c.name}</span>
-        <span class="n-place">${c.place}</span>
+      const lot = c.steps.filter(st => st.choice).length, got = Save.data.lotus.filter(id => id.startsWith(c.id + '-')).length;
+      return `<button class="ch-card ${done ? 'done' : un ? 'open' : 'locked'} ${i === next ? 'next' : ''}" data-i="${i}" ${un ? '' : 'disabled'}>
+        <span class="ch-thumb">${BG.get(THUMB[c.id])}<span class="ch-num">${c.num}</span></span>
+        <span class="ch-medal">${icon(c.icon)}</span>
+        <span class="ch-dev">${c.dev}</span>
+        <span class="ch-name">${c.name}</span>
+        <span class="ch-place">${c.place}</span>
+        <span class="ch-lotus">${'✿'.repeat(got)}<i>${'✿'.repeat(Math.max(0, lot - got))}</i></span>
+        <span class="ch-cta">${done ? 'Replay' : un ? (i === next ? '▶ Play' : 'Play') : '🔒 Locked'}</span>
       </button>`;
     }).join('');
-    const path = P.slice(0, 6).map((p, i) => `${i ? 'L' : 'M'}${p[0]} ${p[1]}`).join(' ');
     const s = this.screen(`
-      <div class="map-head">
-        <h2>The Journey</h2>
-        <div class="stats"><span>✿ ${Save.data.lotus.length}/${TOTAL_LOTUS} lotuses</span><span>📜 ${Save.data.learn.length}/${Object.keys(LEARN).length} learnings</span><span>👥 ${Save.data.met.length}/${Object.keys(CHARS).length} characters</span></div>
+      <div class="map-top">
+        <div><div class="map-kicker">Story Mode</div><h2>The Journey</h2></div>
+        <div class="stats"><span>✿ ${Save.data.lotus.length}/${TOTAL_LOTUS}</span><span>📜 ${Save.data.learn.length}/${Object.keys(LEARN).length}</span><span>👥 ${Save.data.met.length}/${Object.keys(CHARS).length}</span></div>
       </div>
-      <svg class="map-path" viewBox="0 0 1280 720"><path d="${path}" stroke="#f6d77e" stroke-width="4" stroke-dasharray="2 12" stroke-linecap="round" fill="none"/>
-        <path d="M1060 505 Q1080 190 640 196 Q200 190 140 410" stroke="#f6d77e" stroke-width="3" stroke-dasharray="10 10" fill="none" opacity=".6"/>
-        <text x="900" y="232" fill="#f6d77e" font-family="Cormorant Garamond, serif" font-style="italic" font-size="20" opacity=".8">the Pushpaka's flight home</text></svg>
-      ${nodes}
-      <div class="map-foot"><button class="btn ghost home">⟵ Title</button><button class="btn ghost chars">Characters</button><button class="btn ghost wis">Wisdom Scroll</button><button class="btn ghost gfx">${Action3D.supported ? (use3D() ? '3D mode: on' : '3D mode: off') : '3D unavailable'}</button><button class="btn ghost reset">Reset progress</button></div>`, 'map');
-    s.querySelectorAll('.node').forEach(n => n.onclick = () => { Sound.init(); playChapter(+n.dataset.i); });
+      <div class="ch-row">${cards}</div>
+      <div class="map-foot"><button class="btn ghost home">⟵ Menu</button><button class="btn ghost chars">Characters</button><button class="btn ghost wis">Wisdom Scroll</button><button class="btn ghost gfx">${Action3D.supported ? (use3D() ? '3D: on' : '3D: off') : '3D unavailable'}</button><button class="btn ghost reset">Reset</button></div>`, 'map');
+    s.querySelectorAll('.ch-card').forEach(n => n.onclick = () => { Sound.init(); playChapter(+n.dataset.i); });
     s.querySelector('.home').onclick = () => this.title();
     s.querySelector('.chars').onclick = () => this.gallery();
     s.querySelector('.wis').onclick = () => this.wisdom();
@@ -418,7 +419,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#scene').addEventListener('click', adv);
   $('#game3d').addEventListener('click', () => { if (!Action3D.active) adv(); });
   window.addEventListener('keydown', e => {
-    if (Games.active || Action.active || Action3D.active) return;
+    if (Games.active || Action.active || Action3D.active || Duel.active) return;
     if (e.code === 'Space' || e.code === 'Enter') {
       if (UI.advance && !$('#modal').classList.contains('show')) { e.preventDefault(); adv(); }
     }
@@ -431,4 +432,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const paint = () => { snd.textContent = Sound.on ? '♪ Sound on' : '♪ Sound off'; };
   paint(); snd.onclick = () => { Sound.toggle(); paint(); };
   UI.title();
+  // invite links: ?room=CODE drops the guest straight into the room
+  const room = new URLSearchParams(location.search).get('room');
+  if (room && Action3D.supported) setTimeout(() => DuelUI.joinRoom(room.toUpperCase().slice(0, 5)), 400);
 });

@@ -212,8 +212,8 @@ const Story3D = (() => {
   function shotTarget() {
     const s = shot;
     if (s.kind === 'orbit') {
-      const a = Math.sin(t * .1) * .9, r = mapView ? 13 : 7.2;
-      return { p: { x: Math.sin(a) * r, y: mapView ? 7 : 2.3, z: Math.cos(a) * r }, l: { x: 0, y: mapView ? 1 : 1.95, z: 0 } };
+      const a = Math.sin(t * .1) * .9, r = mapView ? 8.6 : 7.2;
+      return { p: { x: Math.sin(a) * r, y: mapView ? 1.4 : 2.3, z: Math.cos(a) * r }, l: { x: 0, y: mapView ? -.25 : 1.95, z: 0 } };
     }
     if (s.kind === 'close' && s.a) {
       const a = s.a, f = { x: Math.sin(a.yaw), z: Math.cos(a.yaw) }, hy = (a.ty || 0) + 1.62 * a.scale, d = 3.4 - Math.min(.5, s.t * .05);
@@ -247,7 +247,7 @@ const Story3D = (() => {
   function frame(now) {
     if (!running) return;
     raf = requestAnimationFrame(frame);
-    const busy = Action3D.active || (typeof Action !== 'undefined' && Action.active) || (typeof Games !== 'undefined' && Games.active);
+    const busy = Action3D.active || (typeof Duel !== 'undefined' && Duel.active) || (typeof Action !== 'undefined' && Action.active) || (typeof Games !== 'undefined' && Games.active);
     if (busy || !scene) { last = now; return; }
     const dt = Math.min(.05, (now - last) / 1000); last = now; t += dt; shot.t += dt;
     for (const a of Object.values(cast)) updateActor(a, dt);

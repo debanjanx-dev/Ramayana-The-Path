@@ -2,6 +2,23 @@
 
 A browser game that tells the Ramayana in seven chapters, from Bala Kanda to the homecoming in Ayodhya. It mixes story, choices, mini-games and a **Learning Scroll at every checkpoint**.
 
+## Modes
+- **Story Mode:** the seven-chapter journey, with learnings, choices and battles.
+- **Multiplayer Duel:** 1v1 fights in 3D between Rama, Lakshmana, Hanuman, Sugriva, Vali and Ravana.
+  - **Online:** one player creates a room and shares the 5-letter code, or a `?room=CODE` link. The other joins, each picks a fighter, and the host picks the arena and starts. It runs peer-to-peer over WebRTC (PeerJS), with no server of your own needed.
+  - **Two players on one keyboard:**
+    - P1: WASD, Space (jump), F (attack), G (super), Left Shift (roll)
+    - P2: Arrows, Enter (jump), L (attack), ; (super), Right Shift (roll)
+  - **Vs computer.**
+  - **Rules:** best of three rounds. A drawn round doesn't count, so play continues in sudden death until someone wins.
+- **Super Mode:** when the gold bar is full, press K (in Story and online/vs-computer duels; G or ; for the two keyboard players in a local duel). Each hero has their own Super Mode, with slow motion, an aura, a name card and a signature sound:
+  - Rama: Brahmastra, three homing arrows of light
+  - Lakshmana: Shesha Astra, five serpent arrows
+  - Hanuman: Mahima, grows mountain-tall
+  - Sugriva: Kishkindha Quake, three shockwaves
+  - Vali: Indra's Vajra, lightning plus half his foe's strength
+  - Ravana: Chandrahasa Inferno, a ring of fire and fireballs
+
 ## Play
 Open `index.html` in any modern browser by double-clicking it. There's nothing to install. Fonts load from Google Fonts when you're online; the game also works offline with fallback fonts.
 
@@ -23,6 +40,8 @@ Open `index.html` in any modern browser by double-clicking it. There's nothing t
 | `DESIGN.md` | Game plan, style guide and character bible |
 | `js/art.js` | Hand-built SVG characters and scenes in miniature-painting style |
 | `js/data.js` | Characters, learnings and all seven chapter scripts |
+| `js/duel.js` | Multiplayer duels: fighters, super modes, rounds, AI, local play, online rooms (PeerJS) |
+| `vendor/peerjs.min.js` | PeerJS 1.5.4 (MIT), for online rooms |
 | `js/story3d.js` | 3D story staging: sets for every location, cast blocking, film-style camera |
 | `js/action3d.js` | 3D combat: modelled characters with painted faces, toon shading and ink outlines, arenas, bosses, cinematics |
 | `vendor/three.min.js` | Three.js r149 (MIT), bundled so the game works offline |

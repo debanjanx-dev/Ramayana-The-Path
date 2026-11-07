@@ -950,11 +950,52 @@ const Action3D = (() => {
     for (const e of S.foes) if (!e.dead && !e.flung && hyp(e.x - h.x, e.z - h.z) < 3.6 * h.scale + e.r && Math.abs(e.y - h.y) < 2) hurtFoe(e, 3 * (h.giant ? 2 : 1), h, 10);
     if (S.boss && S.boss.heads) headsNear(h, 3.6).forEach(i => hitHead(i, 3));
   }
+  /* ---------- super mode: aura, slow-motion, name card, signature sound ---------- */
+  const SUPERS = {
+    archer: { name: 'Brahmastra', dev: 'ब्रह्मास्त्र', sfx: 'brahmastra', col: '#ffe9a0' },
+    hanuman: { name: 'Mahima', dev: 'महिमा', sfx: 'mahima', col: '#ffb04a' },
+    sugriva: { name: 'Kishkindha Quake', dev: 'भूकम्प', sfx: 'quake', col: '#e9c89a' },
+    flyer: { name: 'Feather Storm', dev: 'पक्षवृष्टि', sfx: 'feathers', col: '#f2d6a0' },
+  };
   function heroSpecial(h) {
-    h.meter = 0; S.flash = .5; S.slowT = .35; Sound.play('conch');
-    if (h.style === 'archer') { say(h, S.def.special + '!'); S.astra = { t: 0, n: 0 }; }
-    else if (S.def.hero === 'hanuman') { say(h, 'Jai Shri Ram!'); h.giant = true; h.giantT = 8; shake(.5); }
-    else { say(h, 'For Kishkindha!'); h.vy = 12; h.onG = false; h.slamming = true; S.pound = .5; }
+    h.meter = 0;
+    const sup = h.style === 'archer' ? SUPERS.archer : h.style === 'flyer' ? SUPERS.flyer : S.def.hero === 'hanuman' ? SUPERS.hanuman : SUPERS.sugriva;
+    S.superCast = { t: 0, sup, h, fired: false }; S.flash = .35; Sound.play(sup.sfx);
+    ringFx(h.x, h.y, h.z, 4, sup.col);
+    if (h.style === 'flyer') return;
+    if (S.def.hero === 'hanuman') { say(h, 'Jai Shri Ram!'); h.giant = true; h.giantT = 9; shake(.5); }
+    else if (h.style !== 'archer') { say(h, 'For Kishkindha!'); h.vy = 12; h.onG = false; h.slamming = true; S.pound = .5; }
+    else say(h, 'Brahmastra!');
+  }
+  function superUpdate(dtReal) {
+    const c = S.superCast; if (!c) return;
+    c.t += dtReal;
+    const h = c.h, col = new T.Color(c.sup.col);
+    // a column of light around the hero
+    for (let i = 0; i < 6; i++) { const a = Math.random() * Math.PI * 2, r = rnd(.4, 1.1) * h.scale; emit(PS_ADD, { x: h.x + Math.cos(a) * r, y: h.y + rnd(0, .4), z: h.z + Math.sin(a) * r, vx: 0, vy: rnd(2, 5), vz: 0, life: rnd(.4, .8), size: rnd(.2, .45), c: col }); }
+    if (h.style === 'archer' && c.t < 1) h.y = Math.max(h.y, lerp(h.y, .7, dtReal * 4));
+    if (!c.fired && c.t > .9) {
+      c.fired = true;
+      if (h.style === 'archer') fireBrahmastra(h);
+      if (h.style === 'flyer') for (let i = 0; i < 16; i++) { const a = h.yaw + (i / 15 - .5) * 1.8; shoot({ k: 'feather', team: 'hero', x: h.x, y: h.y, z: h.z, vx: Math.sin(a) * 24, vy: rnd(-2, 2), vz: Math.cos(a) * 24, dmg: 1.8, r: .45, home: h.lock, turn: 2.5 }); }
+    }
+    if (c.t > 1.9) S.superCast = null;
+  }
+  function fireBrahmastra(h) {
+    // three arrows of light, each seeking its own target
+    const targets = [];
+    if (S.boss && S.boss.heads && !S.boss.dead) {
+      if (S.rv.phase === 2) for (let i = 0; i < 3; i++) targets.push({ p: navelPos(), ent: S.boss, navel: true });
+      else headPositions().forEach((p, i) => { if (S.boss.heads[i].alive && targets.length < 3) targets.push({ p, ent: S.boss }); });
+    }
+    S.foes.filter(e => !e.dead && !e.flung && !(e.def && e.def.heads)).sort((a, b) => hyp(a.x - h.x, a.z - h.z) - hyp(b.x - h.x, b.z - h.z)).forEach(e => { if (targets.length < 3) targets.push({ p: chest(e), ent: e }); });
+    while (targets.length && targets.length < 3) targets.push(targets[targets.length % targets.length]);
+    const sy = h.y + 1.5 * h.scale;
+    [-1, 0, 1].forEach((side, i) => {
+      const a = h.yaw + side * .5, tg = targets[i] || h.lock;
+      setTimeout(() => { if (!S) return; shoot({ k: 'light', team: 'hero', x: h.x + Math.cos(h.yaw) * side * .8, y: sy + (side ? 0 : .6), z: h.z - Math.sin(h.yaw) * side * .8, vx: Math.sin(a) * 30, vy: 4, vz: Math.cos(a) * 30, dmg: 6, r: .5, home: tg, turn: 6, light: true }); Sound.play('bell'); }, i * 140);
+    });
+    shake(.4);
   }
 
   function flyerUpdate(h, dt, ctl, mx, mz, ml) {
@@ -1271,7 +1312,11 @@ const Action3D = (() => {
      ========================================================= */
   function shotMesh(k) {
     const g = new T.Group();
-    if (k === 'arrow' || k === 'bigArrow' || k === 'eArrow' || k === 'astra' || k === 'fireArrow') {
+    if (k === 'light') {
+      g.add(new T.Mesh(SPH(.16, 10, 8), basic('#ffffff'))).scale.set(1, 1, 5);
+      const glow = new T.Mesh(SPH(.42, 10, 8), basic('#ffe9a0', { transparent: true, opacity: .55, blending: T.AdditiveBlending, depthWrite: false })); glow.scale.set(1, 1, 3.4); g.add(glow);
+      const pl = new T.PointLight(0xffe9a0, 1.6, 7); g.add(pl);
+    } else if (k === 'arrow' || k === 'bigArrow' || k === 'eArrow' || k === 'astra' || k === 'fireArrow') {
       const big = k === 'bigArrow' || k === 'astra', fire = k === 'astra' || k === 'fireArrow';
       const sh = new T.Mesh(CYL(.018, .018, big ? 1.4 : 1, 5), big ? basic('#fff1a8') : toon(k === 'eArrow' ? '#2a1a10' : '#6e4416')); sh.rotation.x = Math.PI / 2; g.add(sh);
       const tip = new T.Mesh(CONE(.05, .16, 6), big ? basic('#fff7d0') : toon('#d9dde2')); tip.rotation.x = Math.PI / 2; tip.position.z = big ? .75 : .55; g.add(tip);
@@ -1308,6 +1353,7 @@ const Action3D = (() => {
       const lt = lookTmp().set(o.x + o.vx, o.y + o.vy, o.z + o.vz); o.mesh.lookAt(lt);
       if (o.k === 'rock' || o.k === 'boulder') o.mesh.rotation.x += o.t * 6;
       if (o.k === 'fireball' || o.k === 'meteor' || o.k === 'fireArrow' || o.k === 'astra') flame(o.x, o.y, o.z, .7);
+      if (o.k === 'light') for (let i = 0; i < 3; i++) emit(PS_ADD, { x: o.x + rnd(-.1, .1), y: o.y + rnd(-.1, .1), z: o.z + rnd(-.1, .1), life: rnd(.25, .5), size: rnd(.25, .5), c: new T.Color(i ? '#ffe9a0' : '#ffffff') });
       if (o.t > o.life || Math.abs(o.x) > 200 || Math.abs(o.z) > 260) { o.dead = true; continue; }
       const floor = groundAt(o.x, o.z, o.y + 1);
       if (o.splash && o.y <= Math.max(0, floor)) {
@@ -1323,7 +1369,7 @@ const Action3D = (() => {
             const n = navelPos();
             if (Math.hypot(o.x - n.x, o.y - n.y, o.z - n.z) < .45 * b.scale) {
               o.dead = true;
-              if (S.rv.open && o.k === 'bigArrow') {
+              if ((S.rv.open || o.k === 'light') && (o.k === 'bigArrow' || o.k === 'light')) {
                 S.rv.navel--; S.hitstop = .15; shake(.5); spark(n.x, n.y, n.z, '#fff3c4', 40); Sound.play('bell');
                 if (S.rv.navel > 0) float(`The amṛta drains! (${S.rv.navel} more)`, n, '#ffd76a', 30);
                 S.rv.cyc = 0; S.rv.open = false;
@@ -1339,7 +1385,8 @@ const Action3D = (() => {
         for (const e of S.foes) {
           if (e.dead || e.flung || o.set.has(e) || (e.def && e.def.heads)) continue;
           if (hyp(o.x - e.x, o.z - e.z) < e.r + o.r && o.y > e.y - .2 && o.y < e.y + e.h + .2) {
-            o.set.add(e); hurtFoe(e, o.dmg, o, o.k === 'bigArrow' ? 8 : 3); Sound.play('hit');
+            o.set.add(e); hurtFoe(e, o.dmg, o, o.k === 'bigArrow' || o.k === 'light' ? 8 : 3); Sound.play('hit');
+            if (o.light) { spark(o.x, o.y, o.z, '#fff3c4', 40, 10); ringFx(e.x, e.y + .1, e.z, 3, '#ffe9a0'); shake(.3); }
             if (!o.pierce) { o.dead = true; break; }
           }
         }
@@ -1471,11 +1518,14 @@ const Action3D = (() => {
       const b = c.boss, f = fwdOf(b), hy = b.y + b.h * .82;
       px = b.x + f.x * (2.6 * b.scale + 1.5) + Math.cos(b.yaw) * c.t * .6; py = hy + .2 * b.scale; pz = b.z + f.z * (2.6 * b.scale + 1.5) - Math.sin(b.yaw) * c.t * .6;
       lx = b.x; ly = hy; lz = b.z;
+    } else if (!c && S.superCast && S.superCast.t < 1.1) {
+      const e = S.superCast.h, a = e.yaw + Math.PI * .75 + S.superCast.t * .5, r = 3.2 * e.scale + (e.giant ? 3 : 0);
+      px = e.x + Math.sin(a) * r; py = e.y + 1.3 * e.scale; pz = e.z + Math.cos(a) * r; lx = e.x; ly = e.y + 1.4 * e.scale; lz = e.z;
     } else if (c && (c.kind === 'defeat' || c.kind === 'death') && (c.focus || c.kind === 'death')) {
       const e = c.focus || h, a = S.camYaw + c.t * .5, r = 4 + e.scale * 2.4;
       px = e.x + Math.sin(a) * r; py = e.y + e.h * .7 + 1.5; pz = e.z + Math.cos(a) * r; lx = e.x; ly = e.y + e.h * .4; lz = e.z;
     }
-    const k = c && (c.kind === 'boss' || c.kind === 'defeat') ? Math.min(1, dtReal * 3) : Math.min(1, dtReal * 7);
+    const k = c && (c.kind === 'boss' || c.kind === 'defeat') ? Math.min(1, dtReal * 3) : S.superCast && S.superCast.t < 1.1 ? Math.min(1, dtReal * 5) : Math.min(1, dtReal * 7);
     S.cam.x = lerp(S.cam.x, px, k); S.cam.y = lerp(S.cam.y, py, k); S.cam.z = lerp(S.cam.z, pz, k);
     S.look.x = lerp(S.look.x, lx, k); S.look.y = lerp(S.look.y, ly, k); S.look.z = lerp(S.look.z, lz, k);
     if (!S.def.runner && !h.flying) S.cam.y = Math.max(S.cam.y, .6);
@@ -1494,8 +1544,9 @@ const Action3D = (() => {
     const def = S.def;
     if (S.paused) return;
     cineUpdate(dtReal); if (!S) return;
+    superUpdate(dtReal);
     S.slowT -= dtReal;
-    S.timeScale = S.cine && S.cine.slow ? S.cine.slow : S.slowT > 0 ? .45 : 1;
+    S.timeScale = S.cine && S.cine.slow ? S.cine.slow : S.superCast && S.superCast.t < 1 ? .3 : S.slowT > 0 ? .45 : 1;
     if (S.hitstop > 0) { S.hitstop -= dtReal; return; }
     const dt = dtReal * S.timeScale; S.t += dt;
     const frozen = S.cine && S.cine.freeze;
@@ -1612,6 +1663,19 @@ const Action3D = (() => {
   }
   function wrap(text, maxW) { const g = hctx, words = text.split(' '), lines = []; let line = ''; for (const w of words) { const t = line ? line + ' ' + w : w; if (g.measureText(t).width > maxW) { lines.push(line); line = w; } else line = t; } lines.push(line); return lines; }
 
+  function drawSuperCard(g, c) {
+    const a = Math.min(1, c.t * 4, (1.9 - c.t) * 3); if (a <= 0) return;
+    g.save(); g.globalAlpha = a;
+    const grd = g.createRadialGradient(W / 2, H / 2, 20, W / 2, H / 2, 640); grd.addColorStop(0, 'rgba(255,240,200,.0)'); grd.addColorStop(1, 'rgba(255,200,90,.28)');
+    g.fillStyle = grd; g.fillRect(0, 0, W, H);
+    g.translate(W / 2, 170); g.scale(1 + Math.max(0, .25 - c.t) * 2, 1 + Math.max(0, .25 - c.t) * 2);
+    for (let i = 0; i < 18; i++) { g.rotate(Math.PI / 9); g.fillStyle = 'rgba(255,230,150,.16)'; g.fillRect(0, -3, 420, 6); }
+    g.restore(); g.save(); g.globalAlpha = a;
+    label(c.sup.dev, W / 2, 140, 40, c.sup.col, DEVA);
+    label(c.sup.name.toUpperCase(), W / 2, 205, 74, '#fff8e0', DISPLAY);
+    g.restore();
+  }
+
   function drawHUD() {
     const g = hctx, h = S.hero, def = S.def, c = S.cine;
     g.clearRect(0, 0, W, H);
@@ -1635,6 +1699,7 @@ const Action3D = (() => {
       g.beginPath(); g.moveTo(x - 8, y - 7); g.lineTo(x, y + 6); g.lineTo(x + 8, y - 7); g.fill();
       g.fillStyle = INK; g.textAlign = 'center'; g.fillText(b.text, x, y - 19, w - 20); g.restore();
     }
+    if (S.superCast) drawSuperCard(g, S.superCast);
     // letterbox & cinematic text
     const lb = S.letter * 78; if (lb > 1) { g.fillStyle = '#000'; g.fillRect(0, 0, W, lb); g.fillRect(0, H - lb, W, lb); }
     if (S.flash > 0) { g.fillStyle = `rgba(255,250,230,${Math.min(.9, S.flash)})`; g.fillRect(0, 0, W, H); }
@@ -1780,6 +1845,6 @@ const Action3D = (() => {
   return {
     get supported() { return supported && !failed; }, start, stop, has: id => !!STAGES3[id], get active() { return !!S; },
     _debug: { state: () => S, step, keys, prev },
-    kit: { init: initGfx, get renderer() { return renderer; }, get GRAD() { return GRAD; }, buildFigure, buildJatayu, part, toon, basic, POSE, applyPose, THEME3, tree3, hut3, rock3, tower3, banner3, mountain3, cloud3, groundTex, skyDome, SPH, CAP, CYL, CONE, BOX, TOR, geo, RIG3 },
+    kit: { makePS, psUpdate, emit, SUPERS, init: initGfx, get renderer() { return renderer; }, get GRAD() { return GRAD; }, buildFigure, buildJatayu, part, toon, basic, POSE, applyPose, THEME3, tree3, hut3, rock3, tower3, banner3, mountain3, cloud3, groundTex, skyDome, SPH, CAP, CYL, CONE, BOX, TOR, geo, RIG3 },
   };
 })();
